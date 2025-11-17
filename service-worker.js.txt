@@ -1,0 +1,12 @@
+// AstralPad Service Worker (modo básico)
+self.addEventListener("install", event => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", event => {
+  clients.claim();
+});
+
+self.addEventListener("fetch", event => {
+  // Puedes mejorar esto más adelante con caché offline
+});

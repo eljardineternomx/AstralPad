@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AstralPad Synth</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    body {
+      background: #0b0e16;
+      color: #e4e4e4;
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      text-align: center;
+    }
+    h1 { margin-top: 18px; font-size: 24px; color: #ffd95a; }
+    .pad {
+      width: 90vw;
+      height: 46vh;
+      margin: 18px auto;
+      border-radius: 14px;
+      background: radial-gradient(circle, #2b2f46, #0b0e16);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      touch-action: none;
+      user-select: none;
+    }
+    button {
+      padding: 14px 20px;
+      border-radius: 8px;
+      border: none;
+      background: #ffd95a;
+      color: #000;
+      font-size: 16px;
+      margin: 12px;
+      cursor: pointer;
+    }
+    button:active { transform: scale(0.96); }
+  </style>
+</head>
+<body>
+  <h1>🌞 AstralPad Web Synth</h1>
+  <p>Toque la superficie para generar pads atmosféricos.</p>
+  <div class="pad" id="synthPad">Toca aquí</div>
+
+  <button id="midiBtn">Habilitar MIDI</button>
+
+<script>
+let audioCtx, osc, gain;
+const pad = document.getElementById("synthPad");
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playFreq(freq) {
+  initAudio();
+  osc = audioCtx.createOscillator();
+  gain = audioCtx.createGain();
+  osc.type = "sine";
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 1);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start();
+}
+
+function stopFreq() {
+  if (gain) gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.6);
+  if (osc) osc.stop(audioCtx.currentTime + 1);
+}
+
+pad.addEventListener("pointerdown", e => {
+  const y = e.offsetY / pad.clientHeight;
+  const freq = 200 + (1 - y) * 800;
+  playFreq(freq);
+});
+pad.addEventListener("pointerup", stopFreq);
+
+// WebMIDI for Panda Mini 2
+document.getElementById("midiBtn").onclick = async () => {
+  if (!navigator.requestMIDIAccess) return alert("MIDI no soportado.");
+  const midi = await navigator.requestMIDIAccess();
+  midi.inputs.forEach(input => {
+    input.onmidimessage = msg => {
+      if (msg.data[0] === 144 && msg.data[2] > 0) playFreq(150 + msg.data[1] * 4);
+      if (msg.data[0] === 128 || msg.data[2] === 0) stopFreq();
+    };
+  });
+  alert("MIDI habilitado ✔");
+};
+</script>
+</body>
+</html>
